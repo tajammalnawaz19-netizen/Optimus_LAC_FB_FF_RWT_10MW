@@ -60,7 +60,7 @@
 1500000.000000      ! VS_MaxRat			- Maximum torque rate (in absolute value) in torque controller, [Nm/s].
 47693.69000000      ! VS_MaxTq			- Maximum generator torque in Region 3 (HSS side), [Nm].
 0.000000000000      ! VS_MinTq			- Minimum generator torque (HSS side), [Nm].
-0.733038000000      ! VS_MinOMSpd		- Minimum generator speed [rad/s]
+140.3035279000      ! VS_MinOMSpd		- Minimum generator speed [rad/s]
 0.701470000000      ! VS_Rgn2K			- Generator torque constant in Region 2 (HSS side), [Nm/(rad/s)^2]
 8000000.000000      ! VS_RtPwr			- Wind turbine rated power [W]
 43357.90000000      ! VS_RtTq			- Rated torque, [Nm].
@@ -80,7 +80,7 @@
 191.4               ! WE_GearboxRatio	- Gearbox ratio [>=1],  [-]
 140000000.00000     ! WE_Jtot			- Total drivetrain inertia, including blades, hub and casted generator inertia to LSS, [kg m^2]
 1.225               ! WE_RhoAir			- Air density, [kg m^-3]
-"IEA-10.0-198-RWT_Cp_Ct_Cq.txt"      ! PerfFileName      - File containing rotor performance tables (Cp,Ct,Cq) (absolute path or relative to this file)
+"OptRenova_8MW_Cp_Ct_Cq.txt"      ! PerfFileName      - File containing rotor performance tables (Cp,Ct,Cq) (absolute path or relative to this file)
 20      20          ! PerfTableSize     - Size of rotor performance tables, first number refers to number of blade pitch angles, second number referse to number of tip-speed ratios
 60                  ! WE_FOPoles_N      - Number of first-order system poles used in EKF
 4.0000 4.2069 4.4138 4.6207 4.8276 5.0345 5.2414 5.4483 5.6552 5.8621 6.0690 6.2759 6.4828 6.6897 6.8966 7.1034 7.3103 7.5172 7.7241 7.9310 8.1379 8.3448 8.5517 8.7586 8.9655 9.1724 9.3793 9.5862 9.7931 10.0000 10.5000 11.0000 11.5000 12.0000 12.5000 13.0000 13.5000 14.0000 14.5000 15.0000 15.5000 16.0000 16.5000 17.0000 17.5000 18.0000 18.5000 19.0000 19.5000 20.0000 20.5000 21.0000 21.5000 22.0000 22.5000 23.0000 23.5000 24.0000 24.5000 25.0000               ! WE_FOPoles_v      - Wind speeds corresponding to first-order system poles [m/s]
