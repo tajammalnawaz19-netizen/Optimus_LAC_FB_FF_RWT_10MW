@@ -6,323 +6,316 @@ load('Statistics_BruteForceRegion3_FeedbackOnly.mat','Statistics');
 
 %% Wind speeds used in the screening simulations
 WindSpeedBins = [12 16 20 24];
+% WindSpeedBins = [24];
+%% Optimization variables
+ThetaK_deg = [8];
 
-%% Separate ThetaK = 3 deg and ThetaK = 6 deg
-% Data order:
-% URef 12: Seed1 03, Seed1 06, Seed2 03, Seed2 06, Seed3 03, Seed3 06
-% URef 16: same
-% URef 20: same
-% URef 24: same
-
-Statistics03 = Statistics(1:2:end,:);
-Statistics06 = Statistics(2:2:end,:);
-
-%% Pre-allocate results
 nWind = length(WindSpeedBins);
+nThetaK = length(ThetaK_deg);
+nSeed = 3;
 
-TowerDEL03   = zeros(1,nWind);
-TowerDEL06   = zeros(1,nWind);
+%% Pre-allocate result matrices
+% Rows = wind speeds
+% Columns = Theta_K values
 
-ShaftDEL03   = zeros(1,nWind);
-ShaftDEL06   = zeros(1,nWind);
+TowerDEL    = zeros(nWind,nThetaK);
+ShaftDEL    = zeros(nWind,nThetaK);
+BladeDEL    = zeros(nWind,nThetaK);
+Power       = zeros(nWind,nThetaK);
+Overspeed   = zeros(nWind,nThetaK);
+PitchTravel = zeros(nWind,nThetaK);
+MaxGenTq    = zeros(nWind,nThetaK);
 
-BladeDEL03   = zeros(1,nWind);
-BladeDEL06   = zeros(1,nWind);
+%% Calculate mean/max over seeds
 
-Power03      = zeros(1,nWind);
-Power06      = zeros(1,nWind);
+for iWind = 1:nWind
 
-Overspeed03  = zeros(1,nWind);
-Overspeed06  = zeros(1,nWind);
+    for iTheta = 1:nThetaK
 
-PitchTravel03 = zeros(1,nWind);
-PitchTravel06 = zeros(1,nWind);
+        % Original data ordering:
+        % Wind speed -> Seed -> ThetaK
+        rows = (iWind-1)*nSeed*nThetaK + (0:nSeed-1)*nThetaK + iTheta;
 
-MaxGenTq03   = zeros(1,nWind);
-MaxGenTq06   = zeros(1,nWind);
+        % DELs: mean over seeds
+        TowerDEL(iWind,iTheta) = mean(Statistics.DEL_4_TwrBsMyt(rows));
 
-%% Calculate mean/max over the 3 seeds
-for i = 1:nWind
+        ShaftDEL(iWind,iTheta) = mean(Statistics.DEL_4_RotTorq(rows));
 
-    % Rows belonging to this wind speed
-    rows = (i-1)*3 + (1:3);
+        BladeDEL(iWind,iTheta) = mean(Statistics.DEL_10_RootMyb1(rows));
 
-    %% DELs: mean of 3 seeds
-    TowerDEL03(i) = mean(Statistics03.DEL_4_TwrBsMyt(rows));
-    TowerDEL06(i) = mean(Statistics06.DEL_4_TwrBsMyt(rows));
+        % Electrical power: mean over seeds
+        Power(iWind,iTheta) = mean(Statistics.mean_GenPwr(rows));
 
-    ShaftDEL03(i) = mean(Statistics03.DEL_4_RotTorq(rows));
-    ShaftDEL06(i) = mean(Statistics06.DEL_4_RotTorq(rows));
+        % Overspeed: maximum over seeds
+        Overspeed(iWind,iTheta) = max(Statistics.Overshoot_GenSpeed(rows));
 
-    BladeDEL03(i) = mean(Statistics03.DEL_10_RootMyb1(rows));
-    BladeDEL06(i) = mean(Statistics06.DEL_10_RootMyb1(rows));
+        % Pitch travel: mean over seeds
+        PitchTravel(iWind,iTheta) = mean(Statistics.Travel_BldPitch1(rows));
 
-    %% Electrical power: mean of 3 seeds
-    Power03(i) = mean(Statistics03.mean_GenPwr(rows));
-    Power06(i) = mean(Statistics06.mean_GenPwr(rows));
+        % Maximum generator torque: maximum over seeds
+        MaxGenTq(iWind,iTheta) = max(Statistics.max_GenTq(rows));
 
-    %% Overspeed
-    % Maximum value among the 3 seeds
-    Overspeed03(i) = max(Statistics03.Overshoot_GenSpeed(rows));
-    Overspeed06(i) = max(Statistics06.Overshoot_GenSpeed(rows));
-
-    %% Pitch travel: mean of 3 seeds
-    PitchTravel03(i) = mean(Statistics03.Travel_BldPitch1(rows));
-    PitchTravel06(i) = mean(Statistics06.Travel_BldPitch1(rows));
-
-    %% Maximum generator torque: maximum of 3 seeds
-    MaxGenTq03(i) = max(Statistics03.max_GenTq(rows));
-    MaxGenTq06(i) = max(Statistics06.max_GenTq(rows));
-
+    end
 end
 
 
-%% ============================================================
-%  PLOT 1: TOWER DEL
-% =============================================================
+%% Plot settings
+
+% Generate legend labels automatically
+LegendLabels = arrayfun(@(x) sprintf('\\theta_K = %g deg',x), ...
+    ThetaK_deg,'UniformOutput',false);
+
+%% PLOT 1: TOWER DEL
 
 figure('Name','Tower DEL');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,TowerDEL03/1e3,'o-','LineWidth',1.5)
-plot(WindSpeedBins,TowerDEL06/1e3,'s-','LineWidth',1.5)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,TowerDEL(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
 
-xlabel('Wind speed [m/s]')
-ylabel('Tower DEL')
-title('Tower DEL: \theta_K comparison')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg',...
-    'Location','best')
+xlabel('Wind speed [m/s]');
+ylabel('Tower DEL [kNm]');
+title('Tower DEL: \theta_K comparison');
+legend(LegendLabels,'Location','best');
 
 
-%% ============================================================
-%  PLOT 2: SHAFT DEL
-% =============================================================
+%% PLOT 2: SHAFT DEL
 
 figure('Name','Shaft DEL');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,ShaftDEL03/1e3,'o-','LineWidth',1.5)
-plot(WindSpeedBins,ShaftDEL06/1e3,'s-','LineWidth',1.5)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,ShaftDEL(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
 
-xlabel('Wind speed [m/s]')
-ylabel('Shaft DEL')
-title('Shaft DEL: \theta_K comparison')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg',...
-    'Location','best')
+xlabel('Wind speed [m/s]');
+ylabel('Shaft DEL [kNm]');
+title('Shaft DEL: \theta_K comparison');
+legend(LegendLabels,'Location','best');
 
 
-%% ============================================================
-%  PLOT 3: BLADE DEL
-% =============================================================
+%% PLOT 3: BLADE DEL
 
 figure('Name','Blade DEL');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,BladeDEL03/1e3,'o-','LineWidth',1.5)
-plot(WindSpeedBins,BladeDEL06/1e3,'s-','LineWidth',1.5)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,BladeDEL(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
 
-xlabel('Wind speed [m/s]')
-ylabel('Blade DEL')
-title('Blade DEL: \theta_K comparison')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg',...
-    'Location','best')
+xlabel('Wind speed [m/s]');
+ylabel('Blade DEL [kNm]');
+title('Blade DEL: \theta_K comparison');
+legend(LegendLabels,'Location','best');
 
 
-%% ============================================================
-%  PLOT 4: ELECTRICAL POWER
-% =============================================================
+%% PLOT 4: ELECTRICAL POWER
 
 figure('Name','Electrical Power');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,Power03/1e3,'o-','LineWidth',1.5)
-plot(WindSpeedBins,Power06/1e3,'s-','LineWidth',1.5)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,Power(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
 
-xlabel('Wind speed [m/s]')
-ylabel('Electrical power [MW]')
-title('Electrical Power: \theta_K comparison')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg',...
-    'Location','best')
+xlabel('Wind speed [m/s]');
+ylabel('Electrical power [MW]');
+title('Electrical Power: \theta_K comparison');
+legend(LegendLabels,'Location','best');
 
 
-%% ============================================================
-%  PLOT 5: GENERATOR OVERSPEED
-% =============================================================
+%% PLOT 5: GENERATOR OVERSPEED
 
 figure('Name','Generator Overspeed');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,Overspeed03*100,'o-','LineWidth',1.5)
-plot(WindSpeedBins,Overspeed06*100,'s-','LineWidth',1.5)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,Overspeed(:,iTheta)*100,'o-', ...
+        'LineWidth',1.5);
+end
 
-% Professor's target: overspeed < 20 %
-yline(20,'k--','20% limit','LineWidth',1.2)
+yline(10,'k--','20% limit','LineWidth',1.2);
 
-xlabel('Wind speed [m/s]')
-ylabel('Generator overspeed [%]')
-title('Generator Overspeed: \theta_K comparison')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg','20% limit',...
-    'Location','best')
+xlabel('Wind speed [m/s]');
+ylabel('Generator overspeed [%]');
+title('Generator Overspeed: \theta_K comparison');
+legend([LegendLabels,{'20% limit'}],'Location','best');
 
 
-%% ============================================================
-%  PLOT 6: PITCH TRAVEL
-% =============================================================
+%% PLOT 6: PITCH TRAVEL
 
 figure('Name','Pitch Travel');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,PitchTravel03,'o-','LineWidth',1.5)
-plot(WindSpeedBins,PitchTravel06,'s-','LineWidth',1.5)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,PitchTravel(:,iTheta),'DisplayName', 'after Notch filter','LineWidth',1.5);
+end
 
-xlabel('Wind speed [m/s]')
-ylabel('Pitch travel')
-title('Pitch Travel: \theta_K comparison')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg',...
-    'Location','best')
-
-
-%% ============================================================
-%  PLOT 7: MAXIMUM GENERATOR TORQUE
-% =============================================================
+xlabel('Wind speed [m/s]');
+ylabel('Pitch travel');
+title('Pitch Travel: At thetha_K=8 degree');
+legend('After Notch filter','Location','best');
+hold on
+plot(WindSpeedBins,[180 278 300 301],'DisplayName', 'Before Notch filter','LineWidth',1.5);
+%% PLOT 7: MAXIMUM GENERATOR TORQUE
 
 figure('Name','Maximum Generator Torque');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,MaxGenTq03,'o-','LineWidth',1.5)
-plot(WindSpeedBins,MaxGenTq06,'s-','LineWidth',1.5)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,MaxGenTq(:,iTheta),'o-', ...
+        'LineWidth',1.5);
+end
 
-% Maximum torque limit
-VS_MaxTq = 15600000;     % Nm
+% Maximum torque limit: convert Nm to kNm
+VS_MaxTq = 15600000;
 
-yline(VS_MaxTq,'k--','Maximum torque',...
-    'LineWidth',1.2)
+yline(VS_MaxTq/1e3,'k--','Maximum torque', ...
+    'LineWidth',1.2);
 
-xlabel('Wind speed [m/s]')
-ylabel('Generator torque [kNm]')
-title('Maximum Generator Torque: \theta_K comparison')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg',...
-    'Maximum torque',...
-    'Location','best')
+xlabel('Wind speed [m/s]');
+ylabel('Generator torque [kNm]');
+title('Maximum Generator Torque: \theta_K comparison');
+legend([LegendLabels,{'Maximum torque'}],'Location','best');
 
 
-%% ============================================================
-%  PLOT 8: ALL-IN-ONE OVERSPEED FOCUS
-% =============================================================
+%% PLOT 8: OVERSPEED FOCUS
 
 figure('Name','Theta_K Optimization');
-hold on; grid on; box on
+hold on; grid on; box on;
 
-plot(WindSpeedBins,Overspeed03*100,'o-','LineWidth',2)
-plot(WindSpeedBins,Overspeed06*100,'s-','LineWidth',2)
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,Overspeed(:,iTheta)*100,'o-', ...
+        'LineWidth',2);
+end
 
-yline(20,'k--','20% target','LineWidth',1.2)
+yline(20,'k--','20% target','LineWidth',1.2);
 
-xlabel('Wind speed [m/s]')
-ylabel('Generator overspeed [%]')
-title('\theta_K optimization: Generator overspeed')
-
-legend('\theta_K = 3 deg','\theta_K = 6 deg',...
-    '20% target',...
-    'Location','best')
+xlabel('Wind speed [m/s]');
+ylabel('Generator overspeed [%]');
+title('\theta_K optimization: Generator overspeed');
+legend([LegendLabels,{'20% target'}],'Location','best');
 
 
-%% ============================================================
-%  DISPLAY NUMERICAL COMPARISON
-% =============================================================
+%% Results tables
 
-ResultsTable = table(WindSpeedBins', TowerDEL03', TowerDEL06', ShaftDEL03', ShaftDEL06', BladeDEL03', BladeDEL06', Power03', Power06', Overspeed03'*100, Overspeed06'*100,PitchTravel03', PitchTravel06',MaxGenTq03'/1e3, MaxGenTq06'/1e3, ...
-    'VariableNames',{'WindSpeed','TowerDEL_3deg','TowerDEL_6deg','ShaftDEL_3deg','ShaftDEL_6deg','BladeDEL_3deg','BladeDEL_6deg','PowerMW_3deg','PowerMW_6deg','OverspeedPct_3deg','OverspeedPct_6deg', 'PitchTravel_3deg','PitchTravel_6deg','MaxGenTq_kNm_3deg','MaxGenTq_kNm_6deg'});
-disp(' ')
-disp('===== Theta_K COMPARISON =====')
-disp(ResultsTable)
-%% ============================================================
-%  COMBINED FIGURE: ALL THETA_K COMPARISON RESULTS
-% =============================================================
+ThetaNames = arrayfun(@(x) sprintf('ThetaK_%gdeg',x),ThetaK_deg,'UniformOutput',false);
 
-figure('Name','Complete Theta_K Comparison',...
-    'Position',[100 100 1200 850]);
+Results_Overspeed = array2table(Overspeed*100,'VariableNames',ThetaNames,'RowNames',compose('%g_mps',WindSpeedBins));
 
-tiledlayout(4,2,'TileSpacing','compact','Padding','compact');
+Results_TowerDEL = array2table(TowerDEL,'VariableNames',ThetaNames,'RowNames',compose('%g_mps',WindSpeedBins));
 
-% 1. Tower DEL
-nexttile
-plot(WindSpeedBins,TowerDEL03/1e3,'o-','LineWidth',1.5)
-hold on
-plot(WindSpeedBins,TowerDEL06/1e3,'s-','LineWidth',1.5)
-grid on; box on
-title('Tower DEL')
-xlabel('Wind speed [m/s]')
-ylabel('DEL / 1000')
-legend('3 deg','6 deg','Location','best')
+Results_ShaftDEL = array2table(ShaftDEL,'VariableNames',ThetaNames,'RowNames',compose('%g_mps',WindSpeedBins));
 
-% 2. Shaft DEL
-nexttile
-plot(WindSpeedBins,ShaftDEL03/1e3,'o-','LineWidth',1.5)
-hold on
-plot(WindSpeedBins,ShaftDEL06/1e3,'s-','LineWidth',1.5)
-grid on; box on
-title('Shaft DEL')
-xlabel('Wind speed [m/s]')
-ylabel('DEL / 1000')
+Results_BladeDEL = array2table(BladeDEL,'VariableNames',ThetaNames,'RowNames',compose('%g_mps',WindSpeedBins));
 
-% 3. Blade DEL
-nexttile
-plot(WindSpeedBins,BladeDEL03/1e3,'o-','LineWidth',1.5)
-hold on
-plot(WindSpeedBins,BladeDEL06/1e3,'s-','LineWidth',1.5)
-grid on; box on
-title('Blade DEL')
-xlabel('Wind speed [m/s]')
-ylabel('DEL / 1000')
+disp('===== GENERATOR OVERSPEED [%] =====');
+disp(Results_Overspeed);
 
-% 4. Electrical power
-nexttile
-plot(WindSpeedBins,Power03/1e3,'o-','LineWidth',1.5)
-hold on
-plot(WindSpeedBins,Power06/1e3,'s-','LineWidth',1.5)
-grid on; box on
-title('Electrical Power')
-xlabel('Wind speed [m/s]')
-ylabel('Power [MW]')
+disp('===== TOWER DEL =====');
+disp(Results_TowerDEL);
 
-% 5. Generator overspeed
-nexttile
-plot(WindSpeedBins,Overspeed03*100,'o-','LineWidth',1.5)
-hold on
-plot(WindSpeedBins,Overspeed06*100,'s-','LineWidth',1.5)
-yline(20,'k--','20% target')
-grid on; box on
-title('Generator Overspeed')
-xlabel('Wind speed [m/s]')
-ylabel('Overspeed [%]')
+disp('===== SHAFT DEL =====');
+disp(Results_ShaftDEL);
 
-% 6. Pitch travel
-nexttile
-plot(WindSpeedBins,PitchTravel03,'o-','LineWidth',1.5)
-hold on
-plot(WindSpeedBins,PitchTravel06,'s-','LineWidth',1.5)
-grid on; box on
-title('Pitch Travel')
-xlabel('Wind speed [m/s]')
-ylabel('Pitch travel')
+disp('===== BLADE DEL =====');
+disp(Results_BladeDEL);
 
-% % 7. Maximum generator torque
-% nexttile
-% plot(WindSpeedBins,MaxGenTq03,'o-','LineWidth',1.5)
-% hold on
-% plot(WindSpeedBins,MaxGenTq06,'s-','LineWidth',1.5)
-% yline(15600,'k--','Maximum torque')
-% grid on; box on
-% title('Maximum Generator Torque')
-% xlabel('Wind speed [m/s]')
-% ylabel('Torque [kNm]')
+%% COMBINED FIGURE: THETA_K OPTIMIZATION
 
-sgtitle('Region 3 Controller Comparison: \theta_K = 3 deg vs 6 deg')
+figure('Name','Theta_K Optimization - Combined Results', ...
+    'Position',[100 100 1200 750]);
+
+tiledlayout(2,3,'TileSpacing','compact','Padding','compact');
+
+%% 1. Tower DEL
+nexttile;
+hold on; grid on; box on;
+
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,TowerDEL(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
+
+xlabel('Wind speed [m/s]');
+ylabel('Tower DEL [kNm]');
+title('Tower DEL');
+
+%% 2. Shaft DEL
+nexttile;
+hold on; grid on; box on;
+
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,ShaftDEL(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
+
+xlabel('Wind speed [m/s]');
+ylabel('Shaft DEL [kNm]');
+title('Shaft DEL');
+
+%% 3. Blade DEL
+nexttile;
+hold on; grid on; box on;
+
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,BladeDEL(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
+
+xlabel('Wind speed [m/s]');
+ylabel('Blade DEL [kNm]');
+title('Blade DEL');
+
+%% 4. Electrical Power
+nexttile;
+hold on; grid on; box on;
+
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,Power(:,iTheta)/1e3,'o-', ...
+        'LineWidth',1.5);
+end
+
+xlabel('Wind speed [m/s]');
+ylabel('Electrical power [MW]');
+title('Electrical Power');
+
+%% 5. Generator Overspeed
+nexttile;
+hold on; grid on; box on;
+
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,Overspeed(:,iTheta)*100,'o-', ...
+        'LineWidth',1.5);
+end
+
+% Updated objective: 10%
+yline(10,'k--','10% objective','LineWidth',1.5);
+
+xlabel('Wind speed [m/s]');
+ylabel('Generator overspeed [%]');
+title('Generator Overspeed');
+
+%% 6. Pitch Travel
+nexttile;
+hold on; grid on; box on;
+
+for iTheta = 1:nThetaK
+    plot(WindSpeedBins,PitchTravel(:,iTheta),'o-', ...
+        'LineWidth',1.5);
+end
+
+xlabel('Wind speed [m/s]');
+ylabel('Pitch travel');
+title('Pitch Travel');
+
+%% Common legend
+lgd = legend(LegendLabels,'Orientation','horizontal');
+lgd.Layout.Tile = 'south';
+
+sgtitle('\theta_K Optimization: Comparison of Performance Metrics');

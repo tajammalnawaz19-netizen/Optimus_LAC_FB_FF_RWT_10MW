@@ -38,7 +38,7 @@ SimulationMode = 'FeedbackOnly';
 
 ExeFile = 'openfast_x64_v4.exe';
 
-SimulationFolder = ['SimulationResults_BruteForceRegion3_',SimulationMode];
+SimulationFolder = ['SimulationResults_BruteForceRegion3_Thetha_k_8_Notch_filter_',SimulationMode];
 
 TemplateFolder = '../IEA10-198-RWT';
 

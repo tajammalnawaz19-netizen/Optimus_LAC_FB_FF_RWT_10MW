@@ -26,10 +26,10 @@ StatisticsFile = 'Statistics_SteadyStates.mat';
 
 %% Optimization variables
 
-ThetaK_deg = [3 6];
+ThetaK_deg = [8];
 URef = [12 16 20 24];
 Seeds = [1 2 3];
-
+                                                                                                                
 PreProcessingVariation = {'URef',URef,'%02d';'Seed',Seeds,'%02d';'ThetaK',ThetaK_deg,'%02d'};
 
 %% Template files and simulation-specific files
@@ -93,6 +93,12 @@ Modifications = {
 
     % ROSCO DISCON.IN: theta_K-dependent KI
     '5','I','PC_GS_KI',@(VariationValues)strjoin(arrayfun(@(x)num2str(x,'%.6f'),MakeKI(VariationValues(3)),'UniformOutput',false),' ')
+    % Enable ROSCO notch filter
+    '5','I','F_NotchType','1'
+    % Set notch filter centre frequency (rad/s) detected peak is 1.25 Hz, so for DISCON use ω = 2π·1.25 ≈ 7.85 rad/s
+    '5','I','F_NotchCornerFreq','7.85000'
+    % Set notch filter numerator and denominator parameters
+    '5','I','F_NotchBetaNumDen','0.050000 0.200000'
     };
 
 %% Time plots: separate figures for each theta_K and wind speed
@@ -125,11 +131,11 @@ PostProcessingConfig.CalculateStatistics = {
 
 %% Frequency analysis
 
-Step = 50;
+Step = 5;
 nData = 600*100/Step;
 nBlocks = 4;
 window = nData/nBlocks;
-AutoSpectrumChannels = {'RotSpeed'};
+AutoSpectrumChannels = {'GenSpeed'};
 
 PostProcessingConfig.CalculateFrequencyResults = {
     'AutoSpectrum',@(Data,Time)EstimateAutoSpectrum(Data,Time,Step,StartTime=StartTime,window=window),AutoSpectrumChannels
@@ -140,7 +146,7 @@ PostProcessingConfig.CalculateFrequencyResults = {
 for iURef = 1:nURef
     ID = iURef;
     PostProcessingConfig.Plots.BasicFrequencyPlot{ID}.Enable = 1;
-    PostProcessingConfig.Plots.BasicFrequencyPlot{ID}.Channels = {'AutoSpectrum_RotSpeed'};
+    PostProcessingConfig.Plots.BasicFrequencyPlot{ID}.Channels = {'AutoSpectrum_GenSpeed'};
     PostProcessingConfig.Plots.BasicFrequencyPlot{ID}.x = 'f';
     PostProcessingConfig.Plots.BasicFrequencyPlot{ID}.yCell = {'S'};
     PostProcessingConfig.Plots.BasicFrequencyPlot{ID}.ylabelCell = {'[(rad/s)^2/Hz]'};
@@ -150,5 +156,5 @@ for iURef = 1:nURef
     nPerWind = nSeed*nThetaK;
     PostProcessingConfig.Plots.BasicFrequencyPlot{ID}.IndicesConsideredDataFiles = [1:nPerWind]+(iURef-1)*nPerWind;
 end
-
+% PostProcessingConfig.Plots.BasicFrequencyPlot{4}.IndicesConsideredDataFiles = 10;
 end
